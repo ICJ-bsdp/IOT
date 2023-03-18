@@ -157,6 +157,8 @@ void setup(void) {
   u8g2.begin();  
   u8g2.setFont(u8g2_font_10x20_tf);
 
+  engine.addWord("Starting", -1);
+
   //setup BLE service 
   BLEDevice::init("BSDP Network");
   BLEServer *pServer = BLEDevice::createServer();
@@ -177,6 +179,7 @@ void setup(void) {
   pAdvertising->start();
 
   //writing to engine
+  engine.clear();
   engine.addWord("Open", -1);
   engine.addWord("To", -1);
   engine.addWord("Pair", -1);
