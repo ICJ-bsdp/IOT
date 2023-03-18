@@ -44,9 +44,31 @@ using namespace std;
 #define OLED_RST 15
 U8G2_SSD1309_128X64_NONAME2_1_4W_HW_SPI u8g2(/* rotation=*/U8G2_R1, /* cs=*/ OLED_CS, /* dc=*/ OLED_DC,/* reset=*/OLED_RST);
 
+class Word {
+  public: 
+    double lifetime = 5000; //ms
+    double createdTick;
+    string s;
+
+    Word(string inStr)
+    {
+      createdTick = millis();
+      s = inStr;
+    }
+
+    void update()
+    {
+      double timeNow = millis();
+      if (createdTick + lifetime < timeNow)
+      {
+        s = "";
+      }
+    }
+};
+
 class SubtitleEngine {
   public:
-    vector<string> log;
+    vector<Word> log;
     // U8G2_SSD1309_128X64_NONAME2_1_4W_HW_SPI oledDisplay;
 
     // SubtitleEngine(const U8G2_SSD1309_128X64_NONAME2_1_4W_HW_SPI &oledDisplay) : oledDisplay(oledDisplay) {}
@@ -54,40 +76,66 @@ class SubtitleEngine {
 
     void addWord(string word)
     {
+      Word typed(word);
+      log.push_back(typed);
+    }
+
+    void addWord(Word word)
+    {
       log.push_back(word);
     }
 
     void printToScreen() {
+      const int height = 128;
+      const int starting = 128 / 2 + (-1 * (15 * log.size()) / 2);
       for (int i = 0; i < log.size(); ++i)
       {
-        u8g2.drawStr(0, 15 * i, log[i].c_str());
+        u8g2.drawStr(0, starting + 15 * i, log[i].s.c_str());
       }
     }
 
     void clear() {
       log.clear();
     }
+
+    void cleanUp(){
+      int i = 0;
+      while (i < log.size())
+      {
+        log[i].update();
+        if (log[i].s == "")
+        {
+          log.erase(log.begin() + i);
+        }
+        i++;
+      }
+    }
 };
 
 SubtitleEngine engine;
 
+//8 words per row
 void setup(void) {
   u8g2.setFontPosTop();
   u8g2.begin();  
   u8g2.setFont(u8g2_font_10x20_tf);
-  engine.addWord("Penis");
-  engine.addWord("Penis");
-  engine.addWord("Penis");
-  engine.addWord("Penis");
-  engine.addWord("Penis");
+  engine.addWord("I");
+  engine.addWord("Want");
+  delay(1000);
+  engine.addWord("To");
+  engine.addWord("Fuck");
+  delay(1000);
+  engine.addWord("Sunny");
+  engine.addWord("Park");
 }
 
 void loop()
 {
-  u8g2.firstPage();
+  u8g2.firstPage();   
   do
   {
+    engine.cleanUp();
     engine.printToScreen();
-  } while( u8g2.nextPage());
-  // delay(1000);
+  } while( u8g2.nextPage() );
+  delay(100);
 }
