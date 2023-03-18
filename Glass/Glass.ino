@@ -77,11 +77,15 @@ class SubtitleEngine {
     void addWord(string word)
     {
       Word typed(word);
-      log.push_back(typed);
+      addWord(typed);
     }
 
     void addWord(Word word)
     {
+      if (log.size() >= 8)
+      {
+        log.erase(log.begin());
+      }
       log.push_back(word);
     }
 
@@ -119,18 +123,24 @@ void setup(void) {
   u8g2.setFontPosTop();
   u8g2.begin();  
   u8g2.setFont(u8g2_font_10x20_tf);
-  engine.addWord("I");
-  engine.addWord("Want");
-  delay(1000);
-  engine.addWord("To");
-  engine.addWord("Fuck");
-  delay(1000);
-  engine.addWord("Sunny");
-  engine.addWord("Park");
+  engine.addWord("1");
+  engine.addWord("2");
+  engine.addWord("3");
+  engine.addWord("4");
+  engine.addWord("5");
+  engine.addWord("6");
+  engine.addWord("7");
+  engine.addWord("8");
+
+  delay(2000);
+
+  engine.addWord("Ball");
+  engine.addWord("Sack");
 }
 
 void loop()
 {
+
   u8g2.firstPage();   
   do
   {
