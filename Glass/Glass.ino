@@ -1,5 +1,4 @@
-//code
-
+//indentured definations
 #include <Arduino.h>
 #include <U8g2lib.h>
 
@@ -7,28 +6,24 @@
 #include <vector>
 #include <SPI.h>
 
+#include <BLEDevice.h>
+#include <BLEUtils.h>
+#include <BLEServer.h>
+
 using namespace std;
 
-
-/*
- * Display hardware IIC interface constructor
- *@param rotation：U8G2_R0 Not rotate, horizontally, draw direction from left to right
-           U8G2_R1 Rotate clockwise 90 degrees, drawing direction from top to bottom
-           U8G2_R2 Rotate 180 degrees clockwise, drawing in right-to-left directions
-           U8G2_R3 Rotate clockwise 270 degrees, drawing direction from bottom to top
-           U8G2_MIRROR Normal display of mirror content (v2.6.x version used above)
-           Note: U8G2_MIRROR need to be used with setFlipMode().
- *@param reset：U8x8_PIN_NONE Indicates that the pin is empty and no reset pin is used
- * Display hardware SPI interface constructor
- *@param  Just connect the CS pin (pins are optional)
- *@param  Just connect the DC pin (pins are optional)
- *
-*/
 #define OLED_DC  17
 #define OLED_CS  5
 #define OLED_RST 15
 U8G2_SSD1309_128X64_NONAME2_1_4W_HW_SPI u8g2(/* rotation=*/U8G2_R1, /* cs=*/ OLED_CS, /* dc=*/ OLED_DC,/* reset=*/OLED_RST);
 
+// See the following for generating UUIDs:
+// https://www.uuidgenerator.net/
+
+#define SERVICE_UUID        "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
+#define CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
+
+//homemaid engines
 class Word {
   public: 
     double lifetime = 5000; //ms
@@ -51,6 +46,7 @@ class Word {
     }
 };
 
+//8 words per row
 class SubtitleEngine {
   public:
     vector<Word> log;
@@ -103,29 +99,53 @@ class SubtitleEngine {
 
 SubtitleEngine engine;
 
-//8 words per row
+//Bluetooth Low Energy callback
+class BLECallback: public BLECharacteristicCallbacks {
+    void onWrite(BLECharacteristic *pCharacteristic) {
+      std::string value = pCharacteristic->getValue();
+
+      if (value.length() > 0) {
+        Serial.println(value.c_str());
+        engine.addWord(value);
+      }
+    }
+};
 void setup(void) {
+  //setup console (make sure telemetry is also set to 115200 baud)
+  Serial.begin(115200);
+
+  //setup display
   u8g2.setFontPosTop();
   u8g2.begin();  
   u8g2.setFont(u8g2_font_10x20_tf);
-  engine.addWord("1");
-  engine.addWord("2");
-  engine.addWord("3");
-  engine.addWord("4");
-  engine.addWord("5");
-  engine.addWord("6");
-  engine.addWord("7");
-  engine.addWord("8");
+
+  //setup BLE service 
+  BLEDevice::init("BSDP Network");
+  BLEServer *pServer = BLEDevice::createServer();
+  BLEService *pService = pServer->createService(SERVICE_UUID);
+
+  BLECharacteristic *pCharacteristic = pService->createCharacteristic(
+    CHARACTERISTIC_UUID,
+    BLECharacteristic::PROPERTY_READ |
+    BLECharacteristic::PROPERTY_WRITE
+  );
+
+  pCharacteristic->setCallbacks(new BLECallback());
+
+  // pCharacteristic->setValue("Hello World");
+  pService->start();
+
+  BLEAdvertising *pAdvertising = pServer->getAdvertising();
+  pAdvertising->start();
 }
 
 void loop()
 {
-
   u8g2.firstPage();   
   do
   {
-    engine.cleanUp();
-    engine.printToScreen();
-  } while( u8g2.nextPage() );
+    engine.cleanUp(); //kills all old words that expired lifetimes
+    engine.printToScreen(); //prints to screen words in top down based on recentness (most recent at bottom)
+  } while(u8g2.nextPage());
   delay(100);
 }
