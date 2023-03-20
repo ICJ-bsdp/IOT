@@ -12,7 +12,7 @@
 
 using namespace std;
 
-//VCC plugged into 3.3V
+//!!!!exclude this VCC plugged into 3.3V
 //GND plugged to GND
 //DIN to 23
 //CLK to 18
@@ -160,7 +160,7 @@ void setup(void) {
   engine.addWord("Starting", -1);
 
   //setup BLE service 
-  BLEDevice::init("BSDP Network");
+  BLEDevice::init("SLATE Glasses");
   BLEServer *pServer = BLEDevice::createServer();
   BLEService *pService = pServer->createService(SERVICE_UUID);
 
