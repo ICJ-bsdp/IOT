@@ -12,7 +12,6 @@
 
 using namespace std;
 
-//!!!!exclude this VCC plugged into 3.3V
 //GND plugged to GND
 //DIN to 23
 //CLK to 18
@@ -29,6 +28,8 @@ U8G2_SSD1309_128X64_NONAME2_1_4W_HW_SPI u8g2(/* rotation=*/U8G2_R1, /* cs=*/ OLE
 //make sure this also matches the android applet so it writes to right characteristic & service
 #define SERVICE_UUID        "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
 #define CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
+
+void setUpBLE(string);
 
 //homemaid engines
 class Word {
@@ -125,10 +126,41 @@ SubtitleEngine engine;
 bool deviceConnected = false;
 bool lastTickDeviceConnected = false;
 
+class CommandEngine {
+  public:
+
+  string getParameters(string unfiltered, string command) {
+    return unfiltered.substr(command.length());
+  }
+
+  CommandEngine(string cmd)
+  {
+    string processed = cmd.substr(5);
+    Serial.print("CMD Engine INI");
+
+    if (processed.rfind("CHANGE_NAME", 0) == 0)
+    {
+      changeDeviceName(getParameters(processed, "CHANGE_NAME"));
+      return;
+    } 
+  }
+
+  void changeDeviceName(string newName)
+  {
+    //
+  }
+};
+
 //Bluetooth Low Energy callback on written to
 class BLEWriteCallback: public BLECharacteristicCallbacks {
     void onWrite(BLECharacteristic *pCharacteristic) {
       std::string value = pCharacteristic->getValue();
+
+      if (value.rfind("[CMD]") == 0)
+      {
+        CommandEngine c(value);
+        return;
+      }
 
       if (value.length() > 0) {
         Serial.println(value.c_str());
@@ -148,19 +180,9 @@ class ServerConnectionCallback: public BLEServerCallbacks {
     }
 };
 
-void setup(void) {
-  //setup console (make sure telemetry is also set to 115200 baud)
-  Serial.begin(115200);
-
-  //setup display
-  u8g2.setFontPosTop();
-  u8g2.begin();  
-  u8g2.setFont(u8g2_font_10x20_tf);
-
-  engine.addWord("Starting", -1);
-
-  //setup BLE service 
-  BLEDevice::init("SLATE Glasses");
+void setUpBLE(string name)
+{
+  BLEDevice::init(name);
   BLEServer *pServer = BLEDevice::createServer();
   BLEService *pService = pServer->createService(SERVICE_UUID);
 
@@ -177,6 +199,21 @@ void setup(void) {
 
   BLEAdvertising *pAdvertising = pServer->getAdvertising();
   pAdvertising->start();
+}
+
+void setup(void) {
+  //setup console (make sure telemetry is also set to 115200 baud)
+  Serial.begin(115200);
+
+  //setup display
+  u8g2.setFontPosTop();
+  u8g2.begin();  
+  u8g2.setFont(u8g2_font_10x20_tf);
+
+  engine.addWord("Starting", -1);
+
+  //setup BLE service 
+  setUpBLE("SLATE Glass");
 
   //writing to engine
   engine.clear();
