@@ -73,6 +73,23 @@ class SubtitleEngine {
     vector<Word> log;
     SubtitleEngine() {}
 
+    void addSentence(string sentence, int lifetimeOverride)
+    {
+      string s;
+      stringstream ss(sentence);
+
+      while (getline(ss, s, ' ')) {
+        Word typed(s, lifetimeOverride);
+        addWord(typed);
+      }      
+    }
+
+    void addSentence(string sentence)
+    {
+      Word typed("");
+      addSentence(sentence, typed.lifetime);
+    }
+
     void addWord(string word, int lifetimeOverride)
     {
       Word typed(word, lifetimeOverride);
@@ -135,14 +152,19 @@ class CommandEngine {
 
   CommandEngine(string cmd)
   {
-    string processed = cmd.substr(5);
-    Serial.print("CMD Engine INI");
+    string processed = cmd.substr(4);
 
     if (processed.rfind("CHANGE_NAME", 0) == 0)
     {
       changeDeviceName(getParameters(processed, "CHANGE_NAME"));
       return;
-    } 
+    }
+    else if (processed.rfind("CLEAR", 0) == 0)
+    {
+      engine.clear();
+      engine.addSentence(getParameters(processed, "CLEAR").c_str());
+      return;
+    }
   }
 
   void changeDeviceName(string newName)
@@ -156,7 +178,7 @@ class BLEWriteCallback: public BLECharacteristicCallbacks {
     void onWrite(BLECharacteristic *pCharacteristic) {
       std::string value = pCharacteristic->getValue();
 
-      if (value.rfind("[CMD]") == 0)
+      if (value.rfind("CMD_") == 0)
       {
         CommandEngine c(value);
         return;
@@ -208,7 +230,7 @@ void setup(void) {
   //setup display
   u8g2.setFontPosTop();
   u8g2.begin();  
-  u8g2.setFont(u8g2_font_10x20_tf);
+  u8g2.setFont(u8g2_font_Georgia7px_te);
 
   engine.addWord("Starting", -1);
 
